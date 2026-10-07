@@ -156,7 +156,13 @@ let package = Package(
     ]
 )
 
-if ProcessInfo.processInfo.environment["SKIP_BRIDGE"] ?? "0" != "0" {
+// SKIP_DYNAMIC_LIBRARIES and SKIP_BRIDGE both enforce building as dynamic. Read through
+// `Context.environment`: swiftbuild evaluates manifests where `ProcessInfo` does not see them,
+// and the products then stay static under three dynamic consumers of SkipFirebaseCore.
+let bridgeMode = (Context.environment["SKIP_BRIDGE"] ?? "0") != "0"
+let forceDylib = bridgeMode || (Context.environment["SKIP_DYNAMIC_LIBRARIES"] ?? "0") != "0"
+
+if bridgeMode {
     package.dependencies += [
         .package(url: "https://github.com/skiptools/skip-fuse.git", "0.0.0"..<"2.0.0"),
         .package(url: "https://github.com/skiptools/skip-fuse-ui.git", from: "1.10.0"),
@@ -167,6 +173,9 @@ if ProcessInfo.processInfo.environment["SKIP_BRIDGE"] ?? "0" != "0" {
             target.dependencies += [.product(name: "SkipFuseUI", package: "skip-fuse-ui")]
         }
     })
+}
+
+if forceDylib {
     // all library types must be dynamic to support bridging
     package.products = package.products.map({ product in
         guard let libraryProduct = product as? Product.Library else { return product }
