@@ -176,6 +176,10 @@ if bridgeMode {
 }
 
 if forceDylib {
+    // Every other product links the SkipFirebaseCore target, so swiftbuild promotes it to a
+    // dynamic library of its own, under its own name; a product of that name blocks the
+    // promotion. Consumers reach the module through any other product.
+    package.products.removeAll { $0.name == "SkipFirebaseCore" }
     // all library types must be dynamic to support bridging
     package.products = package.products.map({ product in
         guard let libraryProduct = product as? Product.Library else { return product }
